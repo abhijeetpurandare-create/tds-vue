@@ -28,13 +28,23 @@ jobs:
         with:
           node-version: 20
 
-      - name: Remove private registry config
+      - name: Prepare workspace for CI
         run: |
+          # Remove .npmrc to avoid private registry auth
           echo "" > .npmrc
+          # Remove lockfile to avoid stale private registry refs
           rm -f pnpm-lock.yaml
+          # Remove workspaces that need private registries
+          rm -rf packages/atoms packages/molecules packages/tarmac-mcp apps/storybook apps/storybook/auth-shell
+          # Update workspace config to only include what we need
+          echo 'packages:
+            - "packages/tokens"
+            - "packages/web-components"
+            - "packages/vue"
+            - "apps/storybook-vue"' > pnpm-workspace.yaml
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --ignore-scripts --no-optional --filter=@tarmac/tokens --filter=@tarmac/web-components --filter=storybook-vue...
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Build tokens
         run: pnpm run build --filter=@tarmac/tokens
