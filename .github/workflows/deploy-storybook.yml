@@ -29,10 +29,22 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      - run: pnpm install --no-frozen-lockfile
+      - name: Remove patched dependencies from package.json
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            delete pkg.pnpm;
+            require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+          "
 
-      - name: Build packages
-        run: pnpm run build --filter=@tarmac/tokens --filter=@tarmac/web-components
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+
+      - name: Build tokens
+        run: pnpm run build --filter=@tarmac/tokens
+
+      - name: Build web components
+        run: pnpm run build --filter=@tarmac/web-components
 
       - name: Build Storybook
         run: pnpm build-storybook
