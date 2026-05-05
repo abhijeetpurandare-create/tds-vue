@@ -29,10 +29,12 @@ jobs:
           node-version: 20
 
       - name: Remove private registry config
-        run: echo "" > .npmrc
+        run: |
+          echo "" > .npmrc
+          rm -f pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --ignore-scripts --no-optional
+        run: pnpm install --no-frozen-lockfile --ignore-scripts --no-optional --filter=@tarmac/tokens --filter=@tarmac/web-components --filter=storybook-vue...
 
       - name: Build tokens
         run: pnpm run build --filter=@tarmac/tokens
