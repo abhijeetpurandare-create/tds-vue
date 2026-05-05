@@ -1,0 +1,14 @@
+diff --git a/dist/preset.js b/dist/preset.js
+index fdce716ce653001e1894662b9661df2f5e05635e..c9658ed60d9eec3cf90e8960f514bc83a6ebd52a 100644
+--- a/dist/preset.js
++++ b/dist/preset.js
+@@ -1222,7 +1222,8 @@ function extractBearerToken(authHeader) {
+ //#endregion
+ //#region src/preset.ts
+ const previewAnnotations = async (existingAnnotations = []) => {
+-	return [...existingAnnotations, path.join(import.meta.dirname, "preview.js")];
++	const addonDir = import.meta.dirname ?? path.dirname(url.fileURLToPath(import.meta.url));
++	return [...existingAnnotations, path.join(addonDir, "preview.js")];
+ };
+ const experimental_devServer = async (app, options) => {
+ 	const addonOptions = v.parse(AddonOptions, { toolsets: "toolsets" in options ? options.toolsets : {} });

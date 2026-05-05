@@ -29,14 +29,6 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      - name: Remove patched dependencies from package.json
-        run: |
-          node -e "
-            const pkg = require('./package.json');
-            delete pkg.pnpm;
-            require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
-          "
-
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile --ignore-scripts
 
