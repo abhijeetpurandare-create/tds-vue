@@ -1,0 +1,69 @@
+name: Publish Tarmac MCP
+
+on:
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        description: 'npm distribution tag'
+        required: true
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - dev
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish @delhivery/tarmac-mcp
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com/
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@delhivery:registry=https://npm.pkg.github.com/" > ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
+      - name: Check if version already published
+        id: check
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          PACKAGE_NAME=$(jq -r '.name' package.json)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          if npm view "${PACKAGE_NAME}@${VERSION}" version 2>/dev/null; then
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+            echo "${PACKAGE_NAME}@${VERSION} already exists in registry."
+          else
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+            echo "${PACKAGE_NAME}@${VERSION} not found — will publish."
+          fi
+        working-directory: packages/tarmac-mcp
+
+      - name: Publish
+        if: steps.check.outputs.EXISTS == 'false'
+        run: |
+          echo "Publishing ${{ steps.check.outputs.PACKAGE_NAME }}@${{ steps.check.outputs.VERSION }} with tag: ${{ inputs.npm_tag }}"
+          npm publish --tag ${{ inputs.npm_tag }}
+        working-directory: packages/tarmac-mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+
+      - name: Skip notice
+        if: steps.check.outputs.EXISTS == 'true'
+        run: |
+          echo "::warning::${{ steps.check.outputs.PACKAGE_NAME }}@${{ steps.check.outputs.VERSION }} is already published. Bump the version in packages/tarmac-mcp/package.json and re-run."

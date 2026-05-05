@@ -1,0 +1,29 @@
+{
+  "name": "@delhivery/tarmac-mcp",
+  "version": "0.0.2",
+  "description": "MCP server for Tarmac TDS component library. Serves component metadata (props, types, code examples) from static JSON manifests — no Playwright, no browser, no auth required.",
+  "bin": {
+    "tarmac-mcp": "./bin/tarmac-mcp.cjs"
+  },
+  "files": [
+    "bin",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "tarmac",
+    "design-system",
+    "storybook",
+    "component-library"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "@delhivery:registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/delhivery/Tarmac-Design-System.git",
+    "directory": "packages/tarmac-mcp"
+  },
+  "license": "ISC"
+}

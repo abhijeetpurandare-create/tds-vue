@@ -1,0 +1,65 @@
+{
+  "name": "@tarmac/web-components",
+  "version": "0.0.1",
+  "description": "Tarmac Design System as framework-agnostic Web Components (Custom Elements)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./button": {
+      "import": "./dist/button.js",
+      "types": "./dist/button.d.ts"
+    },
+    "./alert": {
+      "import": "./dist/alert.js",
+      "types": "./dist/alert.d.ts"
+    },
+    "./badge": {
+      "import": "./dist/badge.js",
+      "types": "./dist/badge.d.ts"
+    },
+    "./spinner": {
+      "import": "./dist/spinner.js",
+      "types": "./dist/spinner.d.ts"
+    },
+    "./chip": {
+      "import": "./dist/chip.js",
+      "types": "./dist/chip.d.ts"
+    },
+    "./checkbox": {
+      "import": "./dist/checkbox.js",
+      "types": "./dist/checkbox.d.ts"
+    },
+    "./theme-provider": {
+      "import": "./dist/theme-provider.js",
+      "types": "./dist/theme-provider.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "vite build --watch"
+  },
+  "dependencies": {
+    "lit": "^3.2.0",
+    "@tarmac/tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^5.4.18",
+    "vite-plugin-dts": "^4.3.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "@tarmac:registry": "https://npm.pkg.github.com"
+  },
+  "license": "ISC"
+}

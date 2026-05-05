@@ -1,0 +1,22 @@
+{
+  "dev": {
+    "aws_region": "ap-south-1",
+    "bucket": "v3.delhivery.com",
+    "arn": "arn:aws:cloudfront::086341552770:distribution/E2O9FWMNB54ZRN"
+  },
+  "prod": {
+    "aws_region": "ap-south-1",
+    "bucket": "delhivery-website-2024",
+    "arn": "arn:aws:cloudfront::190020191201:distribution/E23UGXVBCLZ154"
+  },
+  "tags": {
+    "TechnologyUnit": "CustomerApplications",
+    "Project": "DelhiveryWebsiteV2",
+    "Component": "S3/CloudFront",
+    "Environment": "Development",
+    "infra_deployed_by": "bb_pipelines:npmdeploy",
+    "infra_deployed_tag": "__DEPLOYED_TAG__DO_NOT_MODIFY",
+    "infra_deployed_on": "__DEPLOYED_ON__DO_NOT_MODIFY",
+    "infra_deployed_repo": "__DEPLOYED_REPO__DO_NOT_MODIFY"
+  }
+}

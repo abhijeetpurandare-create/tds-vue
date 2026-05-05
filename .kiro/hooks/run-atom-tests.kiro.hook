@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Run Atom Tests on Edit",
+  "description": "Automatically runs the relevant component's Jest tests when a component file or test file is edited in packages/atoms/src/components/",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "packages/atoms/src/components/**/*.tsx",
+      "packages/atoms/src/components/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A component or test file was just edited. Run the relevant Jest test suite for this component using: npx jest --config=jest.config.mjs --testPathPattern=\"<ComponentName>.test\" --no-coverage (run from packages/atoms directory). If tests fail, report the failures and fix them."
+  }
+}

@@ -1,0 +1,305 @@
+name: Build, Test & Publish
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'dev*'
+  pull_request:
+    branches:
+      - main
+
+# Add permissions for package publishing
+permissions:
+  contents: read
+  packages: write
+  pages: write
+  id-token: write
+
+env:
+  NODE_VERSION: 20
+  PNPM_VERSION: 8.6.0
+
+jobs:
+  # Continuous Integration - runs on PRs and tags for validation
+  ci:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+        env:
+          FA_AUTH_TOKEN: ${{ secrets.FA_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CICD_KEY }}
+
+      - name: Build packages
+        run: pnpm --filter "@delhivery/tarmac" build
+        env:
+          FA_AUTH_TOKEN: ${{ secrets.FA_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CICD_KEY }}
+
+  # S3 + CloudFront deployment - runs on tag pushes in parallel with GitHub Pages
+  deploy-storybook-s3:
+    name: Deploy Storybook to S3 + CloudFront
+    runs-on: ubuntu-latest
+    needs: ci
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/dev')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+        env:
+          FA_AUTH_TOKEN: ${{ secrets.FA_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CICD_KEY }}
+
+      - name: Build atoms package
+        run: pnpm --filter "@delhivery/tarmac" build
+        env:
+          FA_AUTH_TOKEN: ${{ secrets.FA_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CICD_KEY }}
+
+      - name: Re-link workspace dependencies
+        run: pnpm install
+        env:
+          FA_AUTH_TOKEN: ${{ secrets.FA_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CICD_KEY }}
+
+      - name: Build molecules package
+        run: pnpm --filter "@tarmac/molecules" build
+
+      - name: Build Storybook
+        run: pnpm --filter storybook build-storybook
+
+      - name: Generate props manifest
+        run: pnpm --filter "@delhivery/tarmac" generate-props-manifest
+
+      - name: Copy props manifest to Storybook build
+        run: |
+          mkdir -p apps/storybook/storybook-static/manifests
+          cp packages/atoms/props-manifest.json apps/storybook/storybook-static/manifests/props-manifest.json
+
+      - name: Determine environment from tag
+        id: env
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          if [[ "$TAG" == dev* ]]; then
+            ENV="dev"
+            VITE_MODE="staging"
+          else
+            ENV="prod"
+            VITE_MODE="production"
+          fi
+          echo "ENV=$ENV" >> $GITHUB_OUTPUT
+          echo "VITE_MODE=$VITE_MODE" >> $GITHUB_OUTPUT
+
+      - name: Build auth-shell
+        run: pnpm build --mode ${{ steps.env.outputs.VITE_MODE }}
+        working-directory: apps/storybook/auth-shell
+
+      - name: Copy storybook-static into auth-shell dist
+        run: cp -r apps/storybook/storybook-static apps/storybook/auth-shell/dist/sb
+
+      - name: Read deployment config
+        id: config
+        run: |
+          ENV=${{ steps.env.outputs.ENV }}
+          BUCKET=$(jq -r ".storybook_hosting.$ENV.bucket" apps/storybook/config.json)
+          ARN=$(jq -r ".storybook_hosting.$ENV.arn" apps/storybook/config.json)
+          AWS_REGION=$(jq -r ".storybook_hosting.$ENV.aws_region" apps/storybook/config.json)
+          echo "BUCKET=$BUCKET" >> $GITHUB_OUTPUT
+          echo "ARN=$ARN" >> $GITHUB_OUTPUT
+          echo "AWS_REGION=$AWS_REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ steps.env.outputs.ENV == 'dev' && secrets.AWS_DEV_FRONTEND_KEY || secrets.AWS_PROD_FRONTEND_KEY}}
+          aws-secret-access-key: ${{ steps.env.outputs.ENV == 'dev' && secrets.AWS_DEV_FRONTEND_SCERET || secrets.AWS_PROD_FRONTEND_SCERET }}
+          aws-region: ${{ steps.config.outputs.AWS_REGION }}
+
+      - name: Sync to S3
+        run: aws s3 sync apps/storybook/auth-shell/dist/ s3://${{ steps.config.outputs.BUCKET }}/storybook/ --exact-timestamps --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          DISTRIBUTION_ID=$(echo "${{ steps.config.outputs.ARN }}" | awk -F'/' '{print $NF}')
+          aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/storybook/*"
+
+  # Package publishing - runs only on version tags
+  publish:
+    name: Publish Packages
+    runs-on: ubuntu-24.04
+    needs: ci
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/dev')
+    # Add explicit permissions for this job
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com/
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@delhivery:registry=https://npm.pkg.github.com/" > ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          cat ~/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install jq for JSON manipulation
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "Git tag: $TAG"
+          
+          # Check if it's a dev tag or production tag
+          if [[ "$TAG" == dev* ]]; then
+            VERSION=${TAG#dev}
+            NPM_TAG="dev"
+            echo "Dev release detected"
+          else
+            VERSION=${TAG#v}
+            NPM_TAG="latest"
+            echo "Production release detected"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "NPM_TAG=$NPM_TAG" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+          echo "NPM tag: $NPM_TAG"
+          # Validate the version format
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+          
+      - name: Install monorepo dependencies
+        run: |
+          pnpm install --no-frozen-lockfile
+        env:
+          FA_AUTH_TOKEN: ${{ secrets.FA_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CICD_KEY }}
+
+      - name: Update package version
+        run: |
+          echo "Setting version to: ${{ steps.get_version.outputs.VERSION }}"
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          echo "Current package.json version:"
+          cat package.json | grep '"version"'
+          echo "Updating to version: $VERSION"
+          
+          # Use jq to update package.json directly (more reliable than pnpm version)
+          jq --arg version "$VERSION" '.version = $version' package.json > package.json.tmp && mv package.json.tmp package.json
+          
+          echo "Updated package.json version:"
+          cat package.json | grep '"version"'
+        working-directory: packages/atoms
+        
+      - name: Build package
+        run: |
+          export NODE_OPTIONS="--max-old-space-size=8192"
+          pnpm build
+        working-directory: packages/atoms
+        
+      - name: Publish package
+        run: |
+          # Use npm instead of pnpm for publishing to avoid potential issues
+          # Use --tag to specify the npm distribution tag (dev or latest)
+          echo "Publishing with npm tag: ${{ steps.get_version.outputs.NPM_TAG }}"
+          npm publish --tag ${{ steps.get_version.outputs.NPM_TAG }}
+        working-directory: packages/atoms
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Figma Registry
+        run: |
+          echo "Publishing @delhiveryone/tarmac to Figma Registry..."
+          
+          # Re-scope package name for Figma registry
+          jq '.name = "@delhiveryone/tarmac" | .publishConfig = {"registry": "https://registry.figma.com/npm/7b86d8bb-a3c1-4305-86b5-aacb0e50f503/registry/", "@delhiveryone:registry": "https://registry.figma.com/npm/7b86d8bb-a3c1-4305-86b5-aacb0e50f503/registry/"}' package.json > package.json.tmp && mv package.json.tmp package.json
+          
+          # Configure npmrc for Figma registry auth
+          echo "@delhiveryone:registry=https://registry.figma.com/npm/7b86d8bb-a3c1-4305-86b5-aacb0e50f503/registry/" > ~/.npmrc
+          echo "//registry.figma.com/npm/7b86d8bb-a3c1-4305-86b5-aacb0e50f503/registry/:_authToken=${FIGMA_AUTH_TOKEN}" >> ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          
+          echo "Publishing with npm tag: ${{ steps.get_version.outputs.NPM_TAG }}"
+          npm publish --tag ${{ steps.get_version.outputs.NPM_TAG }}
+          
+          # Restore original package.json
+          git checkout package.json
+        working-directory: packages/atoms
+        env:
+          FIGMA_AUTH_TOKEN: figp_R0gAz1aNbTDQf2I450AgGlLTtb7iVh59EDf-L_ej
+
+      # Removed GitHub release creation step since releases are created manually from UI 

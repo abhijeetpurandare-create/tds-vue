@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "typeRoots": [
+      "../../node_modules/@types",
+      "../../packages/atoms/node_modules/@types"
+    ],
+    "paths": {
+      "react": ["../../node_modules/.pnpm/react@18.3.1/node_modules/react"],
+      "@delhivery/tarmac": ["../../packages/atoms/src/index.ts"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "storybook-static"]
+}

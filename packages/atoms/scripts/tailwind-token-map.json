@@ -1,0 +1,30 @@
+{
+  "spacing": {
+    "tds-0": "Spacing/0",
+    "tds-2": "Spacing/2",
+    "tds-4": "Spacing/4",
+    "tds-6": "Spacing/6",
+    "tds-8": "Spacing/8",
+    "tds-14": "Spacing/14",
+    "tds-12": "Spacing/12",
+    "tds-16": "Spacing/16",
+    "tds-20": "Spacing/20",
+    "tds-24": "Spacing/24",
+    "tds-32": "Spacing/32"
+  },
+  "borderRadius": {
+    "tds-none": "Radius/none",
+    "tds-sm": "Radius/Small",
+    "tds-default": "Radius/Default",
+    "tds-md": "Radius/Medium",
+    "tds-lg": "Radius/Large",
+    "tds-xl": "Radius/Xlarage",
+    "tds-full": "Radius/Max"
+  },
+  "fontFamily": {
+    "tds-display": "Font_Family/display",
+    "tds-heading": "Font_Family/heading",
+    "tds-body": "Font_Family/body",
+    "tds-caption": "Font_Family/caption"
+  }
+}

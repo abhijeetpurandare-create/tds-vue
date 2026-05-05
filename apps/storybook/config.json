@@ -1,0 +1,24 @@
+{
+  "tags": {
+    "TechnologyUnit": "DelhiveryOne",
+    "Project": "Tarmac",
+    "Component": "S3/CloudFront",
+    "Environment": "Development",
+    "infra_deployed_by": "github_actions:storybook",
+    "infra_deployed_tag": "__DEPLOYED_TAG__DO_NOT_MODIFY",
+    "infra_deployed_on": "__DEPLOYED_ON__DO_NOT_MODIFY",
+    "infra_deployed_repo": "__DEPLOYED_REPO__DO_NOT_MODIFY"
+  },
+  "storybook_hosting": {
+    "dev": {
+      "aws_region": "ap-south-1",
+      "bucket": "frontend-tarmac-mumbai-dev-cdn",
+      "arn": "arn:aws:cloudfront::086341552770:distribution/E3AI9AKSKOLE9D"
+    },
+    "prod": {
+      "aws_region": "ap-south-1",
+      "bucket": "frontend-tarmac-mumbai-prod-cdn",
+      "arn": "arn:aws:cloudfront::PLACEHOLDER:distribution/PLACEHOLDER"
+    }
+  }
+} 

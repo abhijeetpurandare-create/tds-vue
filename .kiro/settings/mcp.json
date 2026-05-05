@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "tarmac-storybook": {
+      "command": "npx",
+      "args": ["-y", "storybook-mcp@latest"],
+      "env": {
+        "STORYBOOK_URL": "https://tarmac-storybook-dev.pntrzz.com/storybook/sb/index.json"
+      }
+    },
+    "tarmac-props": {
+      "command": "node",
+      "args": ["packages/atoms/scripts/tarmac-mcp-server.cjs"],
+      "env": {
+        "STORYBOOK_URL": "https://tarmac-storybook-dev.pntrzz.com/storybook/sb"
+      }
+    }
+  }
+}

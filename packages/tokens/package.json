@@ -1,0 +1,38 @@
+{
+  "name": "@tarmac/tokens",
+  "version": "0.0.1",
+  "description": "Framework-agnostic design tokens for the Tarmac Design System",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./css": "./dist/tokens.css",
+    "./variables": {
+      "import": "./dist/variables.js",
+      "types": "./dist/variables.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist",
+    "dev": "vite build --watch"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "@tarmac:registry": "https://npm.pkg.github.com"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vite": "^5.4.18",
+    "vite-plugin-dts": "^4.3.0"
+  }
+}
